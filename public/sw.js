@@ -1,5 +1,5 @@
 // Service Worker for PWA with Push Notifications
-const CACHE_NAME = 'myremind-v3'; // Increment version to force update
+const CACHE_NAME = 'myremind-v4'; // Increment version to force update
 const urlsToCache = [
   '/manifest.json',
 ];
@@ -37,6 +37,11 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Only handle GET requests - Cache API doesn't support POST/PUT/DELETE
+  if (request.method !== 'GET') {
+    return fetch(request);
+  }
+
   // Always bypass cache for API routes
   if (url.pathname.startsWith('/api/')) {
     return fetch(request);
@@ -48,15 +53,17 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Network First strategy for HTML pages (always get fresh content)
-  if (request.method === 'GET' && request.headers.get('accept')?.includes('text/html')) {
+  if (request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Only cache successful responses
-          if (response.status === 200) {
+          // Only cache successful GET responses
+          if (response.status === 200 && response.type === 'basic') {
             const responseToCache = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseToCache);
+              cache.put(request, responseToCache).catch((err) => {
+                console.warn('Failed to cache response:', err);
+              });
             });
           }
           return response;
@@ -71,7 +78,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache First for static assets (images, CSS, JS)
+  // Cache First for static assets (images, CSS, JS) - only GET requests
   event.respondWith(
     caches.match(request)
       .then((cachedResponse) => {
@@ -79,13 +86,15 @@ self.addEventListener('fetch', (event) => {
           return cachedResponse;
         }
         return fetch(request).then((response) => {
-          // Don't cache if not a success response
+          // Only cache successful GET responses
           if (!response || response.status !== 200 || response.type !== 'basic') {
             return response;
           }
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseToCache);
+            cache.put(request, responseToCache).catch((err) => {
+              console.warn('Failed to cache response:', err);
+            });
           });
           return response;
         });

@@ -1,0 +1,162 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# ============================================
+# QUAN TRỌNG: Files chứa credentials và secrets
+# ============================================
+.env*.local
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# Scripts chứa credentials thực tế
+create-env.sh
+create-env.template.sh
+*credentials*.sh
+*secrets*.sh
+
+# Files chứa passwords, tokens, keys
+*credentials*
+*secrets*
+*password*
+*connection*
+*.key
+*.pem
+*.p12
+*.pfx
+
+# ============================================
+# Dependencies
+# ============================================
+/node_modules
+/.pnp
+.pnp.js
+jspm_packages/
+.npm
+.yarn-integrity
+
+# ============================================
+# Testing
+# ============================================
+/coverage
+.nyc_output
+*.lcov
+
+# ============================================
+# Next.js
+# ============================================
+/.next/
+/out/
+.next/
+out/
+*.tsbuildinfo
+# next-env.d.ts - Giữ lại file này vì Next.js cần nó
+# next-env.d.ts
+
+# ============================================
+# Production
+# ============================================
+/build
+dist/
+.cache/
+.turbo/
+
+# ============================================
+# Vercel
+# ============================================
+.vercel
+
+# ============================================
+# Debug và Logs
+# ============================================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+logs/
+
+# ============================================
+# IDE và Editor files
+# ============================================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# ============================================
+# OS files
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ============================================
+# Temporary files
+# ============================================
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+tmp/
+temp/
+
+# ============================================
+# Package manager files
+# ============================================
+# Giữ lại package-lock.json để đảm bảo version consistency
+# package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ============================================
+# Build artifacts
+# ============================================
+.parcel-cache
+.cache/
+# public/ - Giữ lại public folder vì chứa manifest.json và sw.js
+
+# ============================================
+# Test files và development files
+# ============================================
+test-cookie.js
+unregister-sw.html
+check-security.sh
+*.test.js
+*.test.ts
+*.test.tsx
+*.spec.js
+*.spec.ts
+*.spec.tsx
+
+# ============================================
+# Documentation files (ẩn các file hướng dẫn setup)
+# ============================================
+GIT_SETUP.md
+VERCEL_SETUP.md
+PUSH_NOTIFICATIONS_SETUP.md
+
+# ============================================
+# Storybook
+# ============================================
+.out
+.storybook-out
+
+# ============================================
+# Optional: PWA icons (uncomment if needed)
+# ============================================
+# /public/icon-*.png
+# /public/apple-touch-icon.png

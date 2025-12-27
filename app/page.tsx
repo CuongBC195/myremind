@@ -81,6 +81,7 @@ export default function Home() {
 
   useEffect(() => {
     // Middleware will handle auth check, just load insurances
+    // Set checkingAuth to false immediately since middleware already checked
     setCheckingAuth(false);
     loadInsurances();
     // eslint-disable-next-line react-hooks/exhaustive-deps

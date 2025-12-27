@@ -115,12 +115,24 @@ export default function ProfilePage() {
   }
 
   async function handleLogout() {
-    // Clear localStorage
+    // Clear localStorage first
     clearAuthToken();
+    
+    // Clear cookie on client side as well
+    document.cookie = "auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    
     // Clear cookie via API
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    try {
+      await fetch("/api/auth/logout", { 
+        method: "POST",
+        credentials: "include"
+      });
+    } catch (err) {
+      console.error("Logout API error:", err);
+    }
+    
+    // Force redirect to login
+    window.location.href = "/login";
   }
 
   if (loading) {

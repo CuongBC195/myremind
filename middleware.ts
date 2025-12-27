@@ -37,6 +37,20 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL("/", request.url));
       } else {
         console.log("Middleware: Invalid token on public route", pathname);
+        // Clear invalid token cookie
+        const response = NextResponse.next();
+        const host = request.headers.get("host") || "";
+        const isLocalhost = host.includes("localhost") || host.includes("127.0.0.1");
+        response.cookies.set("auth-token", "", {
+          httpOnly: false,
+          secure: !isLocalhost,
+          sameSite: "lax",
+          maxAge: 0,
+          expires: new Date(0),
+          path: "/",
+        });
+        response.cookies.delete("auth-token");
+        return response;
       }
     }
     return NextResponse.next();
@@ -53,6 +67,17 @@ export async function middleware(request: NextRequest) {
     console.log("Middleware: Token verification failed, redirecting to login from", pathname);
     // Invalid token, clear cookie and redirect to login
     const response = NextResponse.redirect(new URL("/login", request.url));
+    // Clear cookie with same options as when it was set
+    const host = request.headers.get("host") || "";
+    const isLocalhost = host.includes("localhost") || host.includes("127.0.0.1");
+    response.cookies.set("auth-token", "", {
+      httpOnly: false,
+      secure: !isLocalhost,
+      sameSite: "lax",
+      maxAge: 0,
+      expires: new Date(0),
+      path: "/",
+    });
     response.cookies.delete("auth-token");
     return response;
   }

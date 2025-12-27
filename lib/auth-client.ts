@@ -18,6 +18,13 @@ export function getAuthToken(): string | null {
 export function clearAuthToken(): void {
   if (typeof window !== "undefined") {
     localStorage.removeItem(AUTH_TOKEN_KEY);
+    // Also clear cookie
+    document.cookie = "auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=;";
+    // Try with current domain
+    const hostname = window.location.hostname;
+    if (hostname !== "localhost" && hostname !== "127.0.0.1") {
+      document.cookie = `auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${hostname};`;
+    }
   }
 }
 

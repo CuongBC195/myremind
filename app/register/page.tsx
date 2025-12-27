@@ -16,10 +16,29 @@ export default function RegisterPage() {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
+    const name = (formData.get("name") as string)?.trim();
+    const email = (formData.get("email") as string)?.trim().toLowerCase();
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
+
+    // Client-side validation
+    if (!name || name.length < 2) {
+      setError("Tên phải có ít nhất 2 ký tự");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Email không hợp lệ");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      setError("Mật khẩu phải có ít nhất 6 ký tự");
+      setIsLoading(false);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Mật khẩu xác nhận không khớp");
@@ -37,12 +56,16 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (data.success) {
-        router.push("/login");
+        // Clear form on success
+        e.currentTarget.reset();
+        // Redirect to login
+        router.push("/login?registered=true");
       } else {
         setError(data.error || "Đăng ký thất bại");
       }
     } catch (err) {
-      setError("Có lỗi xảy ra khi đăng ký");
+      console.error("Register error:", err);
+      setError("Có lỗi xảy ra khi đăng ký. Vui lòng thử lại.");
     } finally {
       setIsLoading(false);
     }

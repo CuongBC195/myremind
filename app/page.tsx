@@ -17,7 +17,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterType, setFilterType] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("y_te"); // Only health insurance now
   const [filterExpiringSoon, setFilterExpiringSoon] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string | null>(null); // "expired" | "renewed" | null
 
@@ -35,8 +35,9 @@ export default function Home() {
       setError(null);
       
       // Always load all insurances first for filter tags count
+      // Note: type "all" means no filter, system only supports "y_te" now
       const allResult = await getInsurancesAction({
-        type: "all",
+        type: "y_te", // Only health insurance now
         expiringSoon: false,
       });
       
@@ -53,7 +54,7 @@ export default function Home() {
         } else if (filterExpiringSoon) {
           // Load filtered insurances from server (expiring in 7 days)
           const result = await getInsurancesAction({
-            type: "all",
+            type: "y_te", // Only health insurance now
             expiringSoon: true,
           });
           if (result.success && result.data) {
@@ -140,11 +141,11 @@ export default function Home() {
             <button
               onClick={() => {
                 setFilterExpiringSoon(false);
-                setFilterType("all");
+                setFilterType("y_te");
                 setFilterStatus(null);
               }}
               className={`h-12 px-6 rounded-lg border text-sm font-bold transition-colors ${
-                !filterExpiringSoon && filterType === "all" && filterStatus === null
+                !filterExpiringSoon && filterType === "y_te" && filterStatus === null
                   ? "border-black bg-black text-white hover:bg-slate-800"
                   : "border-slate-300 bg-white text-slate-600 hover:border-black hover:text-black"
               }`}
@@ -154,7 +155,7 @@ export default function Home() {
             <button
               onClick={() => {
                 setFilterExpiringSoon(true);
-                setFilterType("all");
+                setFilterType("y_te");
                 setFilterStatus(null);
               }}
               className={`h-12 px-6 rounded-lg border text-sm font-bold transition-colors ${
@@ -171,12 +172,12 @@ export default function Home() {
           <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
             <button 
               onClick={() => {
-                setFilterType("all");
+                setFilterType("y_te");
                 setFilterExpiringSoon(false);
                 setFilterStatus(null);
               }}
               className={`rounded-full border px-4 py-1.5 text-sm font-bold transition-colors ${
-                !filterExpiringSoon && filterType === "all" && filterStatus === null
+                !filterExpiringSoon && filterType === "y_te" && filterStatus === null
                   ? "border-black bg-black text-white"
                   : "border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:text-black"
               }`}
@@ -186,7 +187,7 @@ export default function Home() {
             <button 
               onClick={() => {
                 setFilterExpiringSoon(true);
-                setFilterType("all");
+                setFilterType("y_te");
                 setFilterStatus(null);
               }}
               className={`rounded-full border px-4 py-1.5 text-sm font-medium text-slate-600 border-slate-200 hover:border-slate-400 hover:text-black ${
@@ -198,7 +199,7 @@ export default function Home() {
             <button 
               onClick={() => {
                 setFilterExpiringSoon(false);
-                setFilterType("all");
+                setFilterType("y_te");
                 setFilterStatus("expired");
               }}
               className={`rounded-full border px-4 py-1.5 text-sm font-medium text-slate-600 border-slate-200 hover:border-slate-400 hover:text-black ${
@@ -210,7 +211,7 @@ export default function Home() {
             <button 
               onClick={() => {
                 setFilterExpiringSoon(false);
-                setFilterType("all");
+                setFilterType("y_te");
                 setFilterStatus("renewed");
               }}
               className={`rounded-full border px-4 py-1.5 text-sm font-medium text-slate-600 border-slate-200 hover:border-slate-400 hover:text-black ${

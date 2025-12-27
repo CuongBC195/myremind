@@ -258,14 +258,24 @@ export default function PushNotificationSetup() {
           <div className="flex items-start gap-3">
             <div className="flex-1">
               <p className="text-sm font-semibold text-amber-900">
-                Thông báo đẩy không khả dụng trên Safari iOS
+                ⚠️ Thông báo đẩy không khả dụng trên iPhone/iPad
               </p>
-              <p className="text-xs text-amber-700 mt-1">
-                Safari trên iPhone/iPad không hỗ trợ Web Push API. Bạn vẫn có thể nhận thông báo trong ứng dụng khi mở trang web.
+              <p className="text-xs text-amber-700 mt-2">
+                <strong>Apple không hỗ trợ Web Push API trên iOS.</strong> Điều này có nghĩa là:
               </p>
-              <p className="text-xs text-amber-600 mt-2">
-                💡 Mẹo: Thêm trang web vào màn hình chính (Share → Add to Home Screen) để có trải nghiệm tốt hơn.
-              </p>
+              <ul className="text-xs text-amber-700 mt-2 space-y-1 list-disc list-inside">
+                <li>❌ Thêm vào Home Screen vẫn <strong>KHÔNG</strong> nhận được thông báo khi app đóng</li>
+                <li>❌ Chrome/Firefox trên iOS cũng <strong>KHÔNG</strong> hỗ trợ (Apple bắt buộc dùng Safari engine)</li>
+                <li>✅ Chỉ nhận được thông báo <strong>khi đang mở</strong> trang web</li>
+              </ul>
+              <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+                <strong>💡 Giải pháp:</strong>
+                <ul className="mt-1 space-y-1 list-disc list-inside">
+                  <li>Dùng <strong>Chrome/Firefox trên Android</strong> - hỗ trợ đầy đủ push notifications</li>
+                  <li>Dùng <strong>Safari trên macOS</strong> (từ version 16+) - hỗ trợ push notifications</li>
+                  <li>Hoặc mở trang web thường xuyên để xem thông báo trong app</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>

@@ -3,6 +3,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { updateUser, getUserByEmail } from "@/lib/db-auth";
 import { z } from "zod";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 const profileSchema = z.object({
   name: z.string().min(1, "Tên không được để trống"),
   email: z.string().email("Email không hợp lệ"),

@@ -45,6 +45,14 @@ export async function POST(request: Request) {
     console.error("Register error:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     
+    // Check if it's a duplicate email error
+    if (errorMessage.includes("duplicate key") && errorMessage.includes("users_email_key")) {
+      return NextResponse.json(
+        { success: false, error: "Email này đã được sử dụng. Vui lòng đăng nhập hoặc sử dụng email khác." },
+        { status: 400 }
+      );
+    }
+    
     // Check if it's a database error
     if (errorMessage.includes("relation") && errorMessage.includes("does not exist")) {
       return NextResponse.json(

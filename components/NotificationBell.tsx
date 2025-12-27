@@ -23,15 +23,39 @@ export default function NotificationBell() {
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/notifications");
+      const token = localStorage.getItem('auth-token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch("/api/notifications", {
+        headers,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        // If response is not OK, try to get error message
+        const errorText = await response.text();
+        console.error("API error response:", errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+      }
+      
       const data = await response.json();
       
       if (data.success) {
-        setNotifications(data.data || []);
-        setUnreadCount(data.data?.filter((n: Notification) => !n.read).length || 0);
+        const notifications = data.notifications || data.data || [];
+        setNotifications(notifications);
+        setUnreadCount(notifications.filter((n: Notification) => !n.read).length || 0);
+      } else {
+        console.error("API returned success: false", data);
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
+      // Don't show error to user, just log it
     } finally {
       setLoading(false);
     }
@@ -39,10 +63,20 @@ export default function NotificationBell() {
 
   async function markAsRead(notificationId: string) {
     try {
+      const token = localStorage.getItem('auth-token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       await fetch("/api/notifications", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notificationId, read: true }),
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ notificationIds: [notificationId], markAll: false }),
       });
       
       setNotifications((prev) =>
@@ -56,10 +90,20 @@ export default function NotificationBell() {
 
   async function markAllAsRead() {
     try {
+      const token = localStorage.getItem('auth-token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       await fetch("/api/notifications", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ read: true }),
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ markAll: true }),
       });
       
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));

@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { rows } = await sql`
@@ -28,11 +28,12 @@ export async function GET() {
       LIMIT 50
     `;
 
-    return NextResponse.json({ success: true, data: rows });
+    return NextResponse.json({ success: true, notifications: rows });
   } catch (error) {
     console.error("Error fetching notifications:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Failed to fetch notifications" },
+      { success: false, error: "Failed to fetch notifications", details: errorMessage },
       { status: 500 }
     );
   }
@@ -42,32 +43,39 @@ export async function PUT(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { notificationId, read } = await request.json();
+    const body = await request.json();
+    const { notificationIds, markAll } = body;
 
-    if (notificationId) {
-      // Mark single notification as read
-      await sql`
-        UPDATE notifications
-        SET read = ${read !== undefined ? read : true}
-        WHERE id = ${notificationId} AND user_id = ${user.id}
-      `;
-    } else {
+    if (markAll) {
       // Mark all notifications as read
       await sql`
         UPDATE notifications
         SET read = true
         WHERE user_id = ${user.id} AND read = false
       `;
+    } else if (notificationIds && notificationIds.length > 0) {
+      // Mark specific notifications as read
+      await sql`
+        UPDATE notifications
+        SET read = true
+        WHERE user_id = ${user.id} AND id = ANY(${notificationIds}::uuid[])
+      `;
+    } else {
+      return NextResponse.json(
+        { success: false, error: "Invalid request: specify notificationIds or markAll" },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error updating notification:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Failed to update notification" },
+      { success: false, error: "Failed to update notification", details: errorMessage },
       { status: 500 }
     );
   }

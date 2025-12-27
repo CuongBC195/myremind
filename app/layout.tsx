@@ -50,7 +50,11 @@ export default function RootLayout({
               window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
                   .then((registration) => {
-                    console.log('SW registered: ', registration);
+                    // Log ngắn gọn (chỉ log state và scope)
+                    console.log('Service Worker đã được đăng ký:', {
+                      state: registration.active?.state || 'installing',
+                      scope: registration.scope
+                    });
                     
                     // Check for updates every hour
                     setInterval(() => {
@@ -64,7 +68,7 @@ export default function RootLayout({
                         newWorker.addEventListener('statechange', () => {
                           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                             // New service worker available, prompt user to reload
-                            console.log('New service worker available');
+                            console.log('Có phiên bản Service Worker mới');
                             // Optionally show a notification to user
                             if (confirm('Có phiên bản mới. Bạn có muốn tải lại trang không?')) {
                               window.location.reload();
@@ -75,7 +79,7 @@ export default function RootLayout({
                     });
                   })
                   .catch((registrationError) => {
-                    console.log('SW registration failed: ', registrationError);
+                    console.error('Service Worker đăng ký thất bại:', registrationError);
                   });
               });
             }

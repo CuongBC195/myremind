@@ -1,7 +1,6 @@
 // Service Worker for PWA with Push Notifications
-const CACHE_NAME = 'myremind-v2';
+const CACHE_NAME = 'myremind-v3'; // Increment version to force update
 const urlsToCache = [
-  '/',
   '/manifest.json',
 ];
 
@@ -23,6 +22,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -32,18 +32,63 @@ self.addEventListener('activate', (event) => {
   return self.clients.claim(); // Take control of all pages
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - Network First strategy for HTML, Cache First for static assets
 self.addEventListener('fetch', (event) => {
-  // Exclude API routes and auth routes from caching
-  if (event.request.url.includes('/api/')) {
-    return fetch(event.request);
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Always bypass cache for API routes
+  if (url.pathname.startsWith('/api/')) {
+    return fetch(request);
   }
 
+  // Always bypass cache for auth routes
+  if (url.pathname.startsWith('/login') || url.pathname.startsWith('/register')) {
+    return fetch(request);
+  }
+
+  // Network First strategy for HTML pages (always get fresh content)
+  if (request.method === 'GET' && request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Only cache successful responses
+          if (response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // If network fails, try cache as fallback
+          return caches.match(request).then((cachedResponse) => {
+            return cachedResponse || new Response('Offline', { status: 503 });
+          });
+        })
+    );
+    return;
+  }
+
+  // Cache First for static assets (images, CSS, JS)
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
+    caches.match(request)
+      .then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        return fetch(request).then((response) => {
+          // Don't cache if not a success response
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseToCache);
+          });
+          return response;
+        });
       })
   );
 });

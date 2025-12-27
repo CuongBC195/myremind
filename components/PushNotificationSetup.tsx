@@ -108,7 +108,7 @@ export default function PushNotificationSetup() {
           console.log("Creating new push subscription...");
           subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: applicationServerKey,
+            applicationServerKey: applicationServerKey as BufferSource,
           });
         }
         

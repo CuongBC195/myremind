@@ -42,17 +42,21 @@ export function verifyToken(token: string): UserPayload | null {
   }
 }
 
-// For Edge runtime (middleware) - uses Web Crypto API
-export async function verifyTokenForEdge(token: string): Promise<UserPayload | null> {
-  try {
-    const secret = new TextEncoder().encode(JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    return payload as UserPayload;
-  } catch (error) {
-    console.error("Edge token verification failed:", error instanceof Error ? error.message : String(error));
-    return null;
+  // For Edge runtime (middleware) - uses Web Crypto API
+  export async function verifyTokenForEdge(token: string): Promise<UserPayload | null> {
+    try {
+      const secret = new TextEncoder().encode(JWT_SECRET);
+      const { payload } = await jwtVerify(token, secret);
+      // Validate payload structure before casting
+      if (payload && typeof payload === 'object' && 'id' in payload && 'email' in payload && 'name' in payload) {
+        return payload as unknown as UserPayload;
+      }
+      return null;
+    } catch (error) {
+      console.error("Edge token verification failed:", error instanceof Error ? error.message : String(error));
+      return null;
+    }
   }
-}
 
 export async function getCurrentUser(): Promise<UserPayload | null> {
   const cookieStore = await cookies();

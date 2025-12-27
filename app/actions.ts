@@ -18,11 +18,11 @@ const insuranceSchema = z.object({
   priority: z.enum(["normal", "high"]).default("normal"),
   reminder_frequency: z.enum(["on_due", "3_days", "1_week", "2_weeks", "1_month"]).default("1_week"),
   notes: z.string().optional().nullable().transform(val => val && val.trim() ? val.trim() : undefined),
-  date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
-  phone_number_new: z.string().optional(),
-  cccd: z.string().optional(),
-  insurance_code: z.string().optional(),
-  address: z.string().optional(),
+  date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().transform(val => val || undefined),
+  phone_number_new: z.string().optional().nullable().transform(val => val && val.trim() ? val.trim() : undefined),
+  cccd: z.string().optional().nullable().transform(val => val && val.trim() ? val.trim() : undefined),
+  insurance_code: z.string().optional().nullable().transform(val => val && val.trim() ? val.trim() : undefined),
+  address: z.string().optional().nullable().transform(val => val && val.trim() ? val.trim() : undefined),
   payment_amount: z.string().optional().transform(val => val ? parseFloat(val) : undefined),
 });
 

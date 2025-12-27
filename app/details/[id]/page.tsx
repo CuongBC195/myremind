@@ -304,17 +304,17 @@ export default function InsuranceDetailsPage() {
                 )}
               </div>
 
-              {(insurance.premium_amount || insurance.payment_amount) && (
+              {insurance.payment_amount && (
                 <div className="flex flex-col gap-2">
                   <label className="text-slate-900 text-sm font-semibold leading-normal">
                     Tiền nộp
                   </label>
                   <p className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <DollarSign className="h-4 w-4" />
-                    {(insurance.premium_amount || insurance.payment_amount || 0).toLocaleString("vi-VN")} đ
+                    {(insurance.payment_amount || 0).toLocaleString("vi-VN")} đ
                   </p>
                   <p className="text-sm text-slate-600 font-medium mt-1">
-                    {numberToVietnameseCurrency(insurance.premium_amount || insurance.payment_amount || 0)}
+                    {numberToVietnameseCurrency(insurance.payment_amount || 0)}
                   </p>
                 </div>
               )}

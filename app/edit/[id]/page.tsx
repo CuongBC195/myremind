@@ -28,7 +28,7 @@ export default function EditInsurancePage() {
         const result = await getInsuranceAction(id);
         if (result.success && result.data) {
           setInsurance(result.data);
-          const amount = result.data.payment_amount || result.data.premium_amount || "";
+          const amount = result.data.payment_amount || "";
           setPaymentAmount(amount ? String(amount) : "");
         } else {
           setError(result.error || "Không tìm thấy bảo hiểm");

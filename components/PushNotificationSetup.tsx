@@ -9,8 +9,20 @@ export default function PushNotificationSetup() {
 
   useEffect(() => {
     // Check if browser supports push notifications
+    if (typeof window === "undefined") return;
+    
+    // Safari iOS doesn't support Web Push API
+    const isSafariIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && 
+                        !(window as any).MSStream &&
+                        !("PushManager" in window);
+    
+    if (isSafariIOS) {
+      setIsSupported(false);
+      return;
+    }
+    
+    // Check for push notification support
     if (
-      typeof window !== "undefined" &&
       "serviceWorker" in navigator &&
       "PushManager" in window
     ) {
@@ -232,7 +244,33 @@ export default function PushNotificationSetup() {
   // Show component but with a note about Brave
   const isBrave = typeof navigator !== "undefined" && (navigator as any).brave?.isBrave;
   
+  // Check if Safari iOS
+  const isSafariIOS = typeof window !== "undefined" && 
+                      /iPad|iPhone|iPod/.test(navigator.userAgent) && 
+                      !(window as any).MSStream &&
+                      !("PushManager" in window);
+  
   if (!isSupported) {
+    // Show message for Safari iOS
+    if (isSafariIOS) {
+      return (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-900">
+                Thông báo đẩy không khả dụng trên Safari iOS
+              </p>
+              <p className="text-xs text-amber-700 mt-1">
+                Safari trên iPhone/iPad không hỗ trợ Web Push API. Bạn vẫn có thể nhận thông báo trong ứng dụng khi mở trang web.
+              </p>
+              <p className="text-xs text-amber-600 mt-2">
+                💡 Mẹo: Thêm trang web vào màn hình chính (Share → Add to Home Screen) để có trải nghiệm tốt hơn.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return null; // Don't show anything if not supported
   }
 

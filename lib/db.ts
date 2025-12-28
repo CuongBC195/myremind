@@ -122,6 +122,7 @@ export async function createInsurance(data: {
   payment_amount?: string | number;
   user_id?: string;
 }) {
+  // Simple insert - duplicate check is handled in the action layer
   const { rows } = await sql`
     INSERT INTO insurances (
       customer_name, phone_number, insurance_type, expiry_date, 

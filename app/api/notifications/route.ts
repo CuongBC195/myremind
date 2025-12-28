@@ -12,23 +12,39 @@ export async function GET() {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { rows } = await sql`
-      SELECT 
-        n.id,
-        n.user_id,
-        n.insurance_id,
-        n.title,
-        n.message,
-        n.type,
-        n.read,
-        n.created_at
-      FROM notifications n
-      WHERE n.user_id = ${user.id}
-      ORDER BY n.created_at DESC
-      LIMIT 50
-    `;
+    try {
+      const { rows } = await sql`
+        SELECT 
+          n.id,
+          n.user_id,
+          n.insurance_id,
+          n.title,
+          n.message,
+          n.type,
+          n.read,
+          n.created_at
+        FROM notifications n
+        WHERE n.user_id = ${user.id}
+        ORDER BY n.created_at DESC
+        LIMIT 50
+      `;
 
-    return NextResponse.json({ success: true, notifications: rows });
+      return NextResponse.json({ success: true, notifications: rows || [] });
+    } catch (dbError) {
+      console.error("Database error fetching notifications:", dbError);
+      const dbErrorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+      
+      // Check if table doesn't exist
+      if (dbErrorMessage.includes("relation") && dbErrorMessage.includes("does not exist")) {
+        console.error("Notifications table does not exist. Please run schema migration.");
+        return NextResponse.json(
+          { success: true, notifications: [] }, // Return empty array instead of error
+          { status: 200 }
+        );
+      }
+      
+      throw dbError; // Re-throw to be caught by outer catch
+    }
   } catch (error) {
     console.error("Error fetching notifications:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);

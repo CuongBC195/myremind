@@ -5,6 +5,10 @@ const nextConfig = {
   webpack: (config, { dev }) => {
     if (dev) {
       config.cache = false;
+      // Also clear any existing cache
+      if (config.cache) {
+        delete config.cache;
+      }
     }
     return config;
   },

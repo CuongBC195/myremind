@@ -95,30 +95,29 @@ export async function createInsuranceAction(formData: FormData) {
 
     const validated = insuranceSchema.parse(data);
     
-    // Use advisory lock to prevent race condition and duplicate inserts
-    // Lock is automatically released when transaction ends
+    // Use transaction with advisory lock to prevent race conditions
+    // This works for both local and serverless environments
     try {
-      // Use advisory lock based on user_id to prevent concurrent inserts for same user
-      // Convert user_id to integer for lock (using hash of string if needed)
-      const lockKey = `insurance_create_${user.id}`;
+      // Generate a unique lock key based on user_id and form data
+      const lockKey = `insurance_${user.id}_${validated.customer_name}_${validated.expiry_date}_${validated.insurance_type}`;
       const lockHash = await sql`
-        SELECT hashtext(${lockKey}) as hash
+        SELECT hashtext(${lockKey})::bigint as hash
       `;
-      const lockValue = lockHash.rows[0]?.hash || 0;
+      const lockValue = lockHash.rows[0]?.hash || BigInt(0);
       
-      // Acquire advisory lock (will wait if another request has it)
+      // Acquire advisory lock (blocks other requests with same key)
       await sql`
         SELECT pg_advisory_xact_lock(${lockValue})
       `;
       
-      // Now check for duplicate within last 10 seconds (increased window)
+      // Now check for duplicate within last 30 seconds (longer window)
       const { rows: existing } = await sql`
         SELECT id FROM insurances
         WHERE user_id = ${user.id}
         AND customer_name = ${validated.customer_name}
         AND expiry_date = ${validated.expiry_date}
         AND insurance_type = ${validated.insurance_type}
-        AND created_at > NOW() - INTERVAL '10 seconds'
+        AND created_at > NOW() - INTERVAL '30 seconds'
         ORDER BY created_at DESC
         LIMIT 1
       `;
@@ -144,9 +143,35 @@ export async function createInsuranceAction(formData: FormData) {
       console.error("Error in createInsuranceAction:", dbError);
       const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
       
-      // Check if it's a duplicate key error (shouldn't happen but just in case)
-      if (errorMessage.includes("duplicate key")) {
-        // Try to find the existing record
+      // If insert failed, check if it's because another request created it (race condition)
+      // This handles the case where 2 requests both pass the duplicate check
+      // but one inserts first, causing the second to potentially fail or create duplicate
+      try {
+        // Check again for the record (maybe it was just created by another request)
+        const { rows: existing } = await sql`
+          SELECT * FROM insurances
+          WHERE user_id = ${user.id}
+          AND customer_name = ${validated.customer_name}
+          AND expiry_date = ${validated.expiry_date}
+          AND insurance_type = ${validated.insurance_type}
+          AND created_at > NOW() - INTERVAL '15 seconds'
+          ORDER BY created_at DESC
+          LIMIT 1
+        `;
+        
+        if (existing && existing.length > 0) {
+          // Found existing record (likely created by concurrent request)
+          revalidatePath("/");
+          console.log(`[RACE CONDITION HANDLED] Returning existing insurance ${existing[0].id} created by concurrent request`);
+          return { success: true, data: existing[0] as Insurance };
+        }
+      } catch (findError) {
+        console.error("Error finding existing insurance after insert failure:", findError);
+      }
+      
+      // If it's a duplicate key error from unique constraint, handle it
+      if (errorMessage.includes("duplicate key") || errorMessage.includes("unique constraint")) {
+        // Try one more time to find existing
         try {
           const { rows: existing } = await sql`
             SELECT * FROM insurances

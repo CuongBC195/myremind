@@ -212,6 +212,27 @@ export async function toggleStatusAction(id: string, currentStatus: boolean) {
   }
 }
 
+export async function acknowledgeReminderAction(id: string, pauseReminder: boolean) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: "Bạn cần đăng nhập để thực hiện thao tác này" };
+    }
+
+    const now = new Date().toISOString();
+    const insurance = await updateInsurance(id, {
+      acknowledged_at: now,
+      reminder_paused: pauseReminder,
+    });
+    
+    revalidatePath("/");
+    return { success: true, data: insurance };
+  } catch (error) {
+    console.error("Error acknowledging reminder:", error);
+    return { success: false, error: "Không thể cập nhật trạng thái nhắc nhở" };
+  }
+}
+
 export async function getInsuranceAction(id: string) {
   try {
     const user = await getCurrentUser();

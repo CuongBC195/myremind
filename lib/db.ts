@@ -16,6 +16,8 @@ export interface Insurance {
   insurance_code?: string;
   address?: string;
   payment_amount?: number;
+  reminder_paused?: boolean; // If true, stop sending reminders
+  acknowledged_at?: string; // Timestamp when user acknowledged
   user_id: string | null;
   created_at: string;
 }
@@ -156,6 +158,8 @@ export async function updateInsurance(
     insurance_type?: "xe_may" | "y_te" | "o_to" | "khac";
     expiry_date?: string;
     status?: boolean;
+    reminder_paused?: boolean;
+    acknowledged_at?: string | null;
   }
 ) {
   // Get current record first
@@ -172,6 +176,8 @@ export async function updateInsurance(
   const insurance_type = data.insurance_type ?? current.insurance_type;
   const expiry_date = data.expiry_date ?? current.expiry_date;
   const status = data.status ?? current.status;
+  const reminder_paused = data.reminder_paused !== undefined ? data.reminder_paused : (current.reminder_paused ?? false);
+  const acknowledged_at = data.acknowledged_at !== undefined ? data.acknowledged_at : current.acknowledged_at;
   
   // Update with all values
   const { rows } = await sql`
@@ -180,7 +186,9 @@ export async function updateInsurance(
         phone_number = ${phone_number},
         insurance_type = ${insurance_type},
         expiry_date = ${expiry_date},
-        status = ${status}
+        status = ${status},
+        reminder_paused = ${reminder_paused},
+        acknowledged_at = ${acknowledged_at}
     WHERE id = ${id}
     RETURNING *
   `;

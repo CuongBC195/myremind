@@ -28,11 +28,12 @@ export async function GET(request: Request) {
     // For each user, get their expiring insurances based on reminder_frequency
     for (const user of users) {
       try {
-        // Get all insurances for this user that are not renewed
+        // Get all insurances for this user that are not renewed and not paused
         const { rows: allInsurances } = await sql`
           SELECT * FROM insurances
           WHERE user_id = ${user.id}
           AND status = false
+          AND (reminder_paused IS NULL OR reminder_paused = false)
           ORDER BY expiry_date ASC
         `;
 

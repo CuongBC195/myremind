@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Insurance } from "@/lib/db";
-import { toggleStatusAction, deleteInsuranceAction } from "@/app/actions";
+import { toggleStatusAction, deleteInsuranceAction, acknowledgeReminderAction } from "@/app/actions";
 import { differenceInDays, format } from "date-fns";
-import { Phone, Check, X, Trash2, Edit, Eye } from "lucide-react";
+import { Phone, Check, X, Trash2, Edit, Eye, Bell, BellOff, MoreVertical } from "lucide-react";
 
 interface InsuranceListProps {
   insurances: Insurance[];
@@ -44,6 +44,25 @@ const INSURANCE_TYPE_COLORS: Record<string, { bg: string; border: string; text: 
 
 export default function InsuranceList({ insurances, onUpdate }: InsuranceListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
+  const [showAcknowledgeMenu, setShowAcknowledgeMenu] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowAcknowledgeMenu(null);
+      }
+    }
+
+    if (showAcknowledgeMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [showAcknowledgeMenu]);
 
   function getDaysUntilExpiry(expiryDate: string): number {
     const today = new Date();
@@ -120,6 +139,18 @@ export default function InsuranceList({ insurances, onUpdate }: InsuranceListPro
     setDeletingId(id);
     const result = await deleteInsuranceAction(id);
     setDeletingId(null);
+    
+    if (result.success && onUpdate) {
+      onUpdate();
+    }
+  }
+
+  async function handleAcknowledge(id: string, pauseReminder: boolean) {
+    setAcknowledgingId(id);
+    setShowAcknowledgeMenu(null);
+    
+    const result = await acknowledgeReminderAction(id, pauseReminder);
+    setAcknowledgingId(null);
     
     if (result.success && onUpdate) {
       onUpdate();
@@ -217,10 +248,18 @@ export default function InsuranceList({ insurances, onUpdate }: InsuranceListPro
                   })()}
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full border ${status.border} ${status.bg} px-3 py-1 text-xs font-bold ${status.text}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`}></span>
-                    {status.label}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full border ${status.border} ${status.bg} px-3 py-1 text-xs font-bold ${status.text}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`}></span>
+                      {status.label}
+                    </span>
+                    {insurance.acknowledged_at && !insurance.status && (
+                      <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                        <Bell className="h-3 w-3" />
+                        Đã nhắc {insurance.reminder_paused ? "(Đã dừng)" : "(Tiếp tục nhắc)"}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-end">
                   <div className="flex items-center justify-end gap-2">
@@ -238,6 +277,54 @@ export default function InsuranceList({ insurances, onUpdate }: InsuranceListPro
                     >
                       <Edit className="h-5 w-5" />
                     </Link>
+                    {!insurance.status && (
+                      <div className="relative" ref={menuRef}>
+                        <button
+                          onClick={() => setShowAcknowledgeMenu(showAcknowledgeMenu === insurance.id ? null : insurance.id)}
+                          disabled={acknowledgingId === insurance.id}
+                          className="rounded-lg border border-slate-300 p-2 text-slate-700 hover:bg-black hover:text-white hover:border-black transition-colors disabled:opacity-50"
+                          title="Đã nhắc"
+                        >
+                          {acknowledgingId === insurance.id ? (
+                            <span className="animate-spin">⏳</span>
+                          ) : insurance.acknowledged_at ? (
+                            insurance.reminder_paused ? (
+                              <BellOff className="h-5 w-5" />
+                            ) : (
+                              <Bell className="h-5 w-5" />
+                            )
+                          ) : (
+                            <Bell className="h-5 w-5" />
+                          )}
+                        </button>
+                        {showAcknowledgeMenu === insurance.id && (
+                          <div className="absolute right-0 top-full mt-1 z-10 w-56 rounded-lg border border-slate-200 bg-white shadow-lg">
+                            <div className="py-1">
+                              <button
+                                onClick={() => handleAcknowledge(insurance.id, false)}
+                                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                              >
+                                <Bell className="h-4 w-4" />
+                                <div>
+                                  <div className="font-medium">Đã nhắc - Tiếp tục nhắc</div>
+                                  <div className="text-xs text-slate-500">Vẫn nhận thông báo hàng ngày</div>
+                                </div>
+                              </button>
+                              <button
+                                onClick={() => handleAcknowledge(insurance.id, true)}
+                                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                              >
+                                <BellOff className="h-4 w-4" />
+                                <div>
+                                  <div className="font-medium">Đã nhắc - Dừng nhắc</div>
+                                  <div className="text-xs text-slate-500">Không nhận thông báo nữa</div>
+                                </div>
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      </div>
+                    )}
                     <button
                       onClick={() => handleToggleStatus(insurance.id, insurance.status)}
                       className="rounded-lg border border-slate-300 p-2 text-slate-700 hover:bg-black hover:text-white hover:border-black transition-colors"

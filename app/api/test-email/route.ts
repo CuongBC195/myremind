@@ -21,11 +21,12 @@ export async function GET() {
 
     const user = users[0];
 
-    // Get expiring insurances for this user
+    // Get expiring insurances for this user that are not paused
     const { rows: insurances } = await sql`
       SELECT * FROM insurances
       WHERE user_id = ${user.id}
       AND status = false
+      AND (reminder_paused IS NULL OR reminder_paused = false)
       ORDER BY expiry_date ASC
       LIMIT 5
     `;

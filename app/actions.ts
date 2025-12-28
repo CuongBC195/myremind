@@ -23,7 +23,18 @@ const insuranceSchema = z.object({
   cccd: z.string().optional().nullable().transform(val => val && val.trim() ? val.trim() : undefined),
   insurance_code: z.string().optional().nullable().transform(val => val && val.trim() ? val.trim() : undefined),
   address: z.string().optional().nullable().transform(val => val && val.trim() ? val.trim() : undefined),
-  payment_amount: z.string().optional().transform(val => val ? parseFloat(val) : undefined),
+  payment_amount: z.string().optional().transform(val => {
+    if (!val || !val.trim()) return undefined;
+    const num = parseFloat(val.replace(/,/g, ""));
+    if (isNaN(num) || num < 0) {
+      throw new z.ZodError([{
+        code: "custom",
+        path: ["payment_amount"],
+        message: "Số tiền nộp không hợp lệ"
+      }]);
+    }
+    return num;
+  }),
 });
 
 export async function getInsurancesAction(filter?: {

@@ -46,19 +46,41 @@ export default function EditInsurancePage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    
+    // Prevent double submission
+    if (isSubmitting) {
+      return;
+    }
+    
     setIsSubmitting(true);
     setError(null);
 
-    const formData = new FormData(e.currentTarget);
-    const result = await updateInsuranceAction(id, formData);
+    try {
+      const formData = new FormData(e.currentTarget);
+      
+      // Client-side validation for payment_amount
+      const paymentAmount = formData.get("payment_amount") as string;
+      if (paymentAmount && paymentAmount.trim()) {
+        const numValue = parseFloat(paymentAmount.replace(/,/g, ""));
+        if (isNaN(numValue) || numValue < 0) {
+          setError("Số tiền nộp không hợp lệ");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      const result = await updateInsuranceAction(id, formData);
 
-    if (result.success) {
-      router.push("/");
-    } else {
-      setError(result.error || "Có lỗi xảy ra");
+      if (result.success) {
+        router.push("/");
+      } else {
+        setError(result.error || "Có lỗi xảy ra");
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      setError("Có lỗi xảy ra khi cập nhật nhắc nhở");
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   }
 
   async function handleDelete() {

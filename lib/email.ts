@@ -88,14 +88,14 @@ export function formatInsuranceReminderEmail(
   if (isSingle) {
     const insurance = insurances[0];
     if (insurance.daysUntilExpiry <= 0) {
-      subject = `⚠️ Bảo hiểm đã hết hạn - ${insurance.customer_name}`;
+      subject = `[QUAN TRỌNG] Bảo hiểm đã hết hạn - ${insurance.customer_name}`;
     } else if (insurance.daysUntilExpiry === 1) {
-      subject = `⚠️ Bảo hiểm hết hạn ngày mai - ${insurance.customer_name}`;
+      subject = `[QUAN TRỌNG] Bảo hiểm hết hạn ngày mai - ${insurance.customer_name}`;
     } else {
-      subject = `📅 Bảo hiểm hết hạn trong ${insurance.daysUntilExpiry} ngày - ${insurance.customer_name}`;
+      subject = `Bảo hiểm hết hạn trong ${insurance.daysUntilExpiry} ngày - ${insurance.customer_name}`;
     }
   } else {
-    subject = `📋 Bạn có ${insurances.length} bảo hiểm sắp hết hạn`;
+    subject = `Bạn có ${insurances.length} bảo hiểm sắp hết hạn`;
   }
 
   const appUrl = process.env.APP_URL || "https://myremind.vercel.app";
@@ -127,8 +127,8 @@ export function formatInsuranceReminderEmail(
         <div class="content">
           <p>Xin chào <strong>${userName}</strong>,</p>
           
-          ${hasExpired ? `<p style="color: #dc2626; font-weight: bold;">⚠️ Bạn có ${expiredCount} bảo hiểm đã hết hạn cần được gia hạn ngay!</p>` : ""}
-          ${expiringCount > 0 ? `<p>📅 Bạn có ${expiringCount} bảo hiểm sắp đến hạn:</p>` : ""}
+          ${hasExpired ? `<p style="color: #dc2626; font-weight: bold;">[QUAN TRỌNG] Bạn có ${expiredCount} bảo hiểm đã hết hạn cần được gia hạn ngay!</p>` : ""}
+          ${expiringCount > 0 ? `<p>Bạn có ${expiringCount} bảo hiểm sắp đến hạn:</p>` : ""}
           
           <div style="margin: 20px 0;">
             ${insurances

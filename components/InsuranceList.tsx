@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Insurance } from "@/lib/db";
 import { toggleStatusAction, deleteInsuranceAction, acknowledgeReminderAction } from "@/app/actions";
 import { differenceInDays, format } from "date-fns";
-import { Phone, Check, X, Trash2, Edit, Eye, Bell, BellOff, MoreVertical } from "lucide-react";
+import { Phone, Check, X, Trash2, Edit, Eye, Bell, BellOff } from "lucide-react";
 
 interface InsuranceListProps {
   insurances: Insurance[];
@@ -46,12 +46,12 @@ export default function InsuranceList({ insurances, onUpdate }: InsuranceListPro
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
   const [showAcknowledgeMenu, setShowAcknowledgeMenu] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[data-acknowledge-menu]')) {
         setShowAcknowledgeMenu(null);
       }
     }
@@ -278,7 +278,7 @@ export default function InsuranceList({ insurances, onUpdate }: InsuranceListPro
                       <Edit className="h-5 w-5" />
                     </Link>
                     {!insurance.status && (
-                      <div className="relative" ref={menuRef}>
+                      <div className="relative" data-acknowledge-menu>
                         <button
                           onClick={() => setShowAcknowledgeMenu(showAcknowledgeMenu === insurance.id ? null : insurance.id)}
                           disabled={acknowledgingId === insurance.id}
@@ -286,7 +286,7 @@ export default function InsuranceList({ insurances, onUpdate }: InsuranceListPro
                           title="Đã nhắc"
                         >
                           {acknowledgingId === insurance.id ? (
-                            <span className="animate-spin">⏳</span>
+                            <div className="h-5 w-5 border-2 border-slate-300 border-t-slate-700 rounded-full animate-spin"></div>
                           ) : insurance.acknowledged_at ? (
                             insurance.reminder_paused ? (
                               <BellOff className="h-5 w-5" />
@@ -298,7 +298,7 @@ export default function InsuranceList({ insurances, onUpdate }: InsuranceListPro
                           )}
                         </button>
                         {showAcknowledgeMenu === insurance.id && (
-                          <div className="absolute right-0 top-full mt-1 z-10 w-56 rounded-lg border border-slate-200 bg-white shadow-lg">
+                          <div className="absolute right-0 top-full mt-1 z-10 w-56 rounded-lg border border-slate-200 bg-white shadow-lg" data-acknowledge-menu>
                             <div className="py-1">
                               <button
                                 onClick={() => handleAcknowledge(insurance.id, false)}
@@ -322,7 +322,7 @@ export default function InsuranceList({ insurances, onUpdate }: InsuranceListPro
                               </button>
                             </div>
                           </div>
-                        )
+                        )}
                       </div>
                     )}
                     <button
@@ -343,7 +343,7 @@ export default function InsuranceList({ insurances, onUpdate }: InsuranceListPro
                       title="Xóa"
                     >
                       {deletingId === insurance.id ? (
-                        <span className="animate-spin">⏳</span>
+                        <div className="h-5 w-5 border-2 border-slate-300 border-t-slate-700 rounded-full animate-spin"></div>
                       ) : (
                         <Trash2 className="h-5 w-5" />
                       )}

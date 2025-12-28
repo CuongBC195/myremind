@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createInsuranceAction } from "@/app/actions";
 import Layout from "@/components/Layout";
@@ -13,15 +13,18 @@ export default function AddInsurancePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<string>("");
+  const hasSubmittedRef = useRef(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    e.stopPropagation();
     
-    // Prevent double submission
-    if (isSubmitting) {
+    // Prevent double submission - check both state and ref
+    if (isSubmitting || hasSubmittedRef.current) {
       return;
     }
     
+    hasSubmittedRef.current = true;
     setIsSubmitting(true);
     setError(null);
 
@@ -35,6 +38,7 @@ export default function AddInsurancePage() {
         if (isNaN(numValue) || numValue < 0) {
           setError("Số tiền nộp không hợp lệ");
           setIsSubmitting(false);
+          hasSubmittedRef.current = false;
           return;
         }
       }
@@ -42,14 +46,17 @@ export default function AddInsurancePage() {
       const result = await createInsuranceAction(formData);
 
       if (result.success) {
+        // Prevent navigation if already navigating
         router.push("/");
       } else {
         setError(result.error || "Có lỗi xảy ra");
         setIsSubmitting(false);
+        hasSubmittedRef.current = false;
       }
     } catch (err) {
       setError("Có lỗi xảy ra khi tạo nhắc nhở");
       setIsSubmitting(false);
+      hasSubmittedRef.current = false;
     }
   }
 
@@ -73,7 +80,7 @@ export default function AddInsurancePage() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <form onSubmit={handleSubmit} className="flex flex-col">
+          <form onSubmit={handleSubmit} className="flex flex-col" noValidate>
             {/* Thông tin hợp đồng */}
             <div className="p-6 md:p-8 border-b border-slate-100">
               <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
@@ -345,8 +352,8 @@ export default function AddInsurancePage() {
               </Link>
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full sm:w-auto px-8 py-3 rounded-lg bg-slate-900 text-white font-bold hover:bg-black shadow-md shadow-slate-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                disabled={isSubmitting || hasSubmittedRef.current}
+                className="w-full sm:w-auto px-8 py-3 rounded-lg bg-slate-900 text-white font-bold hover:bg-black shadow-md shadow-slate-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="h-5 w-5" />
                 {isSubmitting ? "Đang lưu..." : "Lưu nhắc nhở"}

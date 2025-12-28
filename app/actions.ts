@@ -6,9 +6,11 @@ import {
   createInsurance,
   updateInsurance,
   deleteInsurance,
+  type Insurance,
 } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { z } from "zod";
+import { sql } from "@vercel/postgres";
 
 const insuranceSchema = z.object({
   customer_name: z.string().min(1, "Tên khách hàng không được để trống"),
@@ -92,9 +94,80 @@ export async function createInsuranceAction(formData: FormData) {
     };
 
     const validated = insuranceSchema.parse(data);
-    const insurance = await createInsurance({ ...validated, user_id: user.id });
-    revalidatePath("/");
-    return { success: true, data: insurance };
+    
+    // Use advisory lock to prevent race condition and duplicate inserts
+    // Lock is automatically released when transaction ends
+    try {
+      // Use advisory lock based on user_id to prevent concurrent inserts for same user
+      // Convert user_id to integer for lock (using hash of string if needed)
+      const lockKey = `insurance_create_${user.id}`;
+      const lockHash = await sql`
+        SELECT hashtext(${lockKey}) as hash
+      `;
+      const lockValue = lockHash.rows[0]?.hash || 0;
+      
+      // Acquire advisory lock (will wait if another request has it)
+      await sql`
+        SELECT pg_advisory_xact_lock(${lockValue})
+      `;
+      
+      // Now check for duplicate within last 10 seconds (increased window)
+      const { rows: existing } = await sql`
+        SELECT id FROM insurances
+        WHERE user_id = ${user.id}
+        AND customer_name = ${validated.customer_name}
+        AND expiry_date = ${validated.expiry_date}
+        AND insurance_type = ${validated.insurance_type}
+        AND created_at > NOW() - INTERVAL '10 seconds'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+      
+      if (existing && existing.length > 0 && existing[0]?.id) {
+        // Duplicate detected, return existing instead of creating new
+        const { rows: existingInsurance } = await sql`
+          SELECT * FROM insurances WHERE id = ${existing[0].id}
+        `;
+        if (existingInsurance && existingInsurance.length > 0) {
+          revalidatePath("/");
+          console.log(`[DUPLICATE PREVENTED] Returning existing insurance ${existing[0].id} instead of creating new`);
+          return { success: true, data: existingInsurance[0] as Insurance };
+        }
+      }
+      
+      // No duplicate found, proceed with creation
+      const insurance = await createInsurance({ ...validated, user_id: user.id });
+      revalidatePath("/");
+      console.log(`[INSURANCE CREATED] New insurance ${insurance.id} created for user ${user.id}`);
+      return { success: true, data: insurance };
+    } catch (dbError) {
+      console.error("Error in createInsuranceAction:", dbError);
+      const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+      
+      // Check if it's a duplicate key error (shouldn't happen but just in case)
+      if (errorMessage.includes("duplicate key")) {
+        // Try to find the existing record
+        try {
+          const { rows: existing } = await sql`
+            SELECT * FROM insurances
+            WHERE user_id = ${user.id}
+            AND customer_name = ${validated.customer_name}
+            AND expiry_date = ${validated.expiry_date}
+            AND insurance_type = ${validated.insurance_type}
+            ORDER BY created_at DESC
+            LIMIT 1
+          `;
+          if (existing && existing.length > 0) {
+            revalidatePath("/");
+            return { success: true, data: existing[0] as Insurance };
+          }
+        } catch (findError) {
+          console.error("Error finding existing insurance:", findError);
+        }
+      }
+      
+      throw dbError; // Re-throw to be caught by outer catch
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return { success: false, error: error.errors[0].message };

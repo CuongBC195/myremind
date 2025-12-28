@@ -86,9 +86,32 @@ export async function GET(request: Request) {
           reminderEndDate.setDate(expiryDate.getDate() + 1); // +1 ngày sau khi hết hạn
           reminderEndDate.setHours(0, 0, 0, 0);
 
-          // Nhắc từ ngày bắt đầu đến ngày hết hạn + 1 ngày
-          // Hôm nay phải >= ngày bắt đầu nhắc VÀ <= ngày kết thúc nhắc
-          const shouldNotify = today >= reminderStartDate && today <= reminderEndDate;
+          // Kiểm tra xem có trong khoảng thời gian nhắc không
+          const isInReminderPeriod = today >= reminderStartDate && today <= reminderEndDate;
+          
+          if (!isInReminderPeriod) {
+            continue; // Không trong khoảng thời gian nhắc
+          }
+
+          // Logic nhắc thông minh: Tránh spam
+          // - Nếu còn > 7 ngày: Nhắc cách 3 ngày (ngày 1, 4, 7, 10, 13...)
+          // - Nếu còn ≤ 7 ngày: Nhắc mỗi ngày
+          // - Ngày hết hạn và sau hết hạn: Nhắc mỗi ngày
+          let shouldNotify = false;
+          
+          if (daysUntilExpiry > 7) {
+            // Còn nhiều ngày: Nhắc cách 3 ngày
+            // Tính số ngày từ ngày bắt đầu nhắc đến hôm nay
+            const daysFromStart = Math.ceil((today.getTime() - reminderStartDate.getTime()) / (1000 * 60 * 60 * 24));
+            // Nhắc vào ngày 0, 3, 6, 9, 12... (cách 3 ngày)
+            shouldNotify = daysFromStart % 3 === 0;
+          } else if (daysUntilExpiry >= 0) {
+            // Còn ≤ 7 ngày: Nhắc mỗi ngày
+            shouldNotify = true;
+          } else {
+            // Đã quá hạn: Nhắc mỗi ngày (chỉ đến ngày hết hạn + 1)
+            shouldNotify = true;
+          }
 
           if (shouldNotify) {
             allExpiring.push(insurance);

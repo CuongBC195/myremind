@@ -36,49 +36,54 @@ export async function GET(request: Request) {
           ORDER BY expiry_date ASC
         `;
 
-        // Filter insurances based on their reminder_frequency
+        // Filter insurances: Nhắc mỗi ngày từ ngày bắt đầu nhắc đến ngày hết hạn
+        // Chỉ nhắc khi status = false (chưa gia hạn)
         const allExpiring: typeof allInsurances = [];
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         for (const insurance of allInsurances) {
+          // Chỉ xử lý nếu chưa gia hạn
+          if (insurance.status === true) {
+            continue; // Đã gia hạn, bỏ qua
+          }
+
           const expiryDate = new Date(insurance.expiry_date);
           expiryDate.setHours(0, 0, 0, 0);
           const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
           
           const reminderFrequency = insurance.reminder_frequency || "1_week";
-          let shouldNotify = false;
-
+          
+          // Tính số ngày trước khi hết hạn để bắt đầu nhắc
+          let daysBeforeExpiry = 0;
           switch (reminderFrequency) {
             case "on_due":
-              // Notify on the expiry date (0 days)
-              shouldNotify = daysUntilExpiry === 0;
+              daysBeforeExpiry = 0; // Bắt đầu nhắc vào ngày hết hạn
               break;
             case "3_days":
-              // Notify 3 days before
-              shouldNotify = daysUntilExpiry === 3;
+              daysBeforeExpiry = 3;
               break;
             case "1_week":
-              // Notify 7 days before
-              shouldNotify = daysUntilExpiry === 7;
+              daysBeforeExpiry = 7;
               break;
             case "2_weeks":
-              // Notify 14 days before
-              shouldNotify = daysUntilExpiry === 14;
+              daysBeforeExpiry = 14;
               break;
             case "1_month":
-              // Notify 30 days before
-              shouldNotify = daysUntilExpiry === 30;
+              daysBeforeExpiry = 30;
               break;
             default:
-              // Default to 7 days
-              shouldNotify = daysUntilExpiry === 7;
+              daysBeforeExpiry = 7;
           }
 
-          // Also notify if already expired
-          if (daysUntilExpiry < 0) {
-            shouldNotify = true;
-          }
+          // Tính ngày bắt đầu nhắc
+          const reminderStartDate = new Date(expiryDate);
+          reminderStartDate.setDate(expiryDate.getDate() - daysBeforeExpiry);
+          reminderStartDate.setHours(0, 0, 0, 0);
+
+          // Nhắc từ ngày bắt đầu đến ngày hết hạn (và cả sau khi hết hạn)
+          // Hôm nay phải >= ngày bắt đầu nhắc
+          const shouldNotify = today >= reminderStartDate;
 
           if (shouldNotify) {
             allExpiring.push(insurance);

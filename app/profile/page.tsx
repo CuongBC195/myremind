@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Layout from "@/components/Layout";
-import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { User, Mail, Lock, Save, LogOut, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { clearAuthToken } from "@/lib/auth-client";
@@ -181,8 +180,6 @@ export default function ProfilePage() {
             </button>
           </div>
         </div>
-
-        <PushNotificationSetup />
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="border-b border-slate-100 flex">

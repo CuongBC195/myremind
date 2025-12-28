@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getExpiringInsurances } from "@/lib/db";
-import { sendPushNotification } from "@/lib/push";
 import { sql } from "@vercel/postgres";
+import { sendEmail, formatInsuranceReminderEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -109,46 +108,35 @@ export async function GET(request: Request) {
             }
             
             totalNotifications += allExpiring.length;
-            console.log(`Created ${allExpiring.length} notifications for user ${user.email}`);
+            console.log(`Created ${allExpiring.length} in-app notifications for user ${user.email}`);
             
-            // Send push notifications
+            // Send email notification
             try {
-              const hasExpired = allExpiring.some(i => {
-                const days = Math.ceil((new Date(i.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                return days <= 0;
+              const insurancesWithDays = allExpiring.map(insurance => {
+                const days = Math.ceil((new Date(insurance.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                return {
+                  customer_name: insurance.customer_name,
+                  insurance_code: insurance.insurance_code,
+                  expiry_date: insurance.expiry_date,
+                  daysUntilExpiry: days,
+                };
               });
               
-              const summaryTitle = allExpiring.length === 1
-                ? (() => {
-                    const insurance = allExpiring[0];
-                    const days = Math.ceil((new Date(insurance.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                    return days <= 0 
-                      ? "Bảo hiểm đã hết hạn" 
-                      : days === 1 
-                      ? "Bảo hiểm hết hạn ngày mai" 
-                      : `Bảo hiểm hết hạn trong ${days} ngày`;
-                  })()
-                : `Bạn có ${allExpiring.length} bảo hiểm sắp hết hạn`;
+              const { subject, html } = formatInsuranceReminderEmail(user.name || user.email, insurancesWithDays);
               
-              const summaryMessage = allExpiring.length === 1
-                ? (() => {
-                    const insurance = allExpiring[0];
-                    const days = Math.ceil((new Date(insurance.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                    return `Bảo hiểm của ${insurance.customer_name}${insurance.insurance_code ? ` (Mã: ${insurance.insurance_code})` : ''} ${days <= 0 ? 'đã hết hạn' : `sẽ hết hạn vào ${new Date(insurance.expiry_date).toLocaleDateString('vi-VN')}`}`;
-                  })()
-                : `Có ${allExpiring.length} bảo hiểm cần được gia hạn. Nhấn để xem chi tiết.`;
+              const emailSent = await sendEmail({
+                to: user.email,
+                subject,
+                html,
+              });
               
-              await sendPushNotification(
-                user.id,
-                summaryTitle,
-                summaryMessage,
-                {
-                  type: hasExpired ? 'warning' : 'reminder',
-                  insuranceIds: allExpiring.map(i => i.id),
-                }
-              );
-            } catch (pushError) {
-              console.error(`Failed to send push notification to ${user.email}:`, pushError);
+              if (emailSent) {
+                console.log(`Email notification sent successfully to ${user.email}`);
+              } else {
+                console.error(`Failed to send email notification to ${user.email}`);
+              }
+            } catch (emailError) {
+              console.error(`Error sending email to ${user.email}:`, emailError);
             }
           } catch (error) {
             console.error(`Failed to create notifications for ${user.email}:`, error);

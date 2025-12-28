@@ -81,9 +81,14 @@ export async function GET(request: Request) {
           reminderStartDate.setDate(expiryDate.getDate() - daysBeforeExpiry);
           reminderStartDate.setHours(0, 0, 0, 0);
 
-          // Nhắc từ ngày bắt đầu đến ngày hết hạn (và cả sau khi hết hạn)
-          // Hôm nay phải >= ngày bắt đầu nhắc
-          const shouldNotify = today >= reminderStartDate;
+          // Tính ngày kết thúc nhắc (ngày hết hạn + 1 ngày)
+          const reminderEndDate = new Date(expiryDate);
+          reminderEndDate.setDate(expiryDate.getDate() + 1); // +1 ngày sau khi hết hạn
+          reminderEndDate.setHours(0, 0, 0, 0);
+
+          // Nhắc từ ngày bắt đầu đến ngày hết hạn + 1 ngày
+          // Hôm nay phải >= ngày bắt đầu nhắc VÀ <= ngày kết thúc nhắc
+          const shouldNotify = today >= reminderStartDate && today <= reminderEndDate;
 
           if (shouldNotify) {
             allExpiring.push(insurance);
@@ -93,7 +98,25 @@ export async function GET(request: Request) {
         if (allExpiring.length > 0) {
           // Create in-app notifications for this user
           try {
+            const todayStr = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+            const actuallyNotified: typeof allExpiring = []; // Track which insurances were actually notified
+            
             for (const insurance of allExpiring) {
+              // Check if already notified today for this insurance (avoid duplicate)
+              const { rows: existingNotifications } = await sql`
+                SELECT id FROM notifications
+                WHERE user_id = ${user.id}
+                AND insurance_id = ${insurance.id}
+                AND DATE(created_at) = ${todayStr}
+                LIMIT 1
+              `;
+              
+              // Skip if already notified today
+              if (existingNotifications.length > 0) {
+                console.log(`Skipping ${insurance.customer_name} - already notified today`);
+                continue;
+              }
+              
               const daysUntilExpiry = Math.ceil(
                 (new Date(insurance.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
               );
@@ -110,35 +133,40 @@ export async function GET(request: Request) {
                 INSERT INTO notifications (user_id, insurance_id, title, message, type, read)
                 VALUES (${user.id}, ${insurance.id}, ${title}, ${message}, ${daysUntilExpiry <= 0 ? 'warning' : 'reminder'}, false)
               `;
+              
+              actuallyNotified.push(insurance); // Track this insurance was notified
             }
             
-            totalNotifications += allExpiring.length;
-            console.log(`Created ${allExpiring.length} in-app notifications for user ${user.email}`);
+            totalNotifications += actuallyNotified.length;
+            console.log(`Created ${actuallyNotified.length} in-app notifications for user ${user.email}`);
             
-            // Send email notification
+            // Send email notification (only for insurances that were actually notified today)
             try {
-              const insurancesWithDays = allExpiring.map(insurance => {
-                const days = Math.ceil((new Date(insurance.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                return {
-                  customer_name: insurance.customer_name,
-                  insurance_code: insurance.insurance_code,
-                  expiry_date: insurance.expiry_date,
-                  daysUntilExpiry: days,
-                };
-              });
-              
-              const { subject, html } = formatInsuranceReminderEmail(user.name || user.email, insurancesWithDays);
-              
-              const emailSent = await sendEmail({
-                to: user.email,
-                subject,
-                html,
-              });
-              
-              if (emailSent) {
-                console.log(`Email notification sent successfully to ${user.email}`);
-              } else {
-                console.error(`Failed to send email notification to ${user.email}`);
+              if (actuallyNotified.length > 0) {
+                const insurancesWithDays = actuallyNotified.map(insurance => {
+                
+                  const days = Math.ceil((new Date(insurance.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                  return {
+                    customer_name: insurance.customer_name,
+                    insurance_code: insurance.insurance_code,
+                    expiry_date: insurance.expiry_date,
+                    daysUntilExpiry: days,
+                  };
+                });
+                
+                const { subject, html } = formatInsuranceReminderEmail(user.name || user.email, insurancesWithDays);
+                
+                const emailSent = await sendEmail({
+                  to: user.email,
+                  subject,
+                  html,
+                });
+                
+                if (emailSent) {
+                  console.log(`Email notification sent successfully to ${user.email} for ${actuallyNotified.length} insurances`);
+                } else {
+                  console.error(`Failed to send email notification to ${user.email}`);
+                }
               }
             } catch (emailError) {
               console.error(`Error sending email to ${user.email}:`, emailError);

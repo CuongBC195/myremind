@@ -4,16 +4,29 @@ Hệ thống MyRemind sử dụng email để gửi thông báo nhắc nhở b�
 
 ## Environment Variables
 
-Thêm các biến môi trường sau vào `.env.local` và Vercel:
+Thêm các biến môi trường sau vào `.env.local` (cho local development) và Vercel (cho production):
 
 ### Gmail (Khuyến nghị)
 
+**Cho Local Development (.env.local):**
 ```env
 EMAIL_SERVICE=gmail
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASSWORD=your-app-password
 EMAIL_FROM=MyRemind <your-email@gmail.com>
 ```
+
+**Cho Vercel Production:**
+1. Vào Vercel Dashboard → Project → Settings → Environment Variables
+2. Thêm các biến sau:
+   - `EMAIL_SERVICE` = `gmail`
+   - `EMAIL_USER` = `your-email@gmail.com`
+   - `EMAIL_PASSWORD` = `your-app-password` (App Password từ Google, có thể có hoặc không có khoảng trắng)
+   - `EMAIL_FROM` = `MyRemind <your-email@gmail.com>`
+
+**⚠️ Lưu ý quan trọng:**
+- App Password từ Google có thể có khoảng trắng (ví dụ: `xxxx xxxx xxxx xxxx`)
+- Nếu Vercel không chấp nhận khoảng trắng, bỏ tất cả khoảng trắng đi (ví dụ: `xxxxxxxxxxxxxxxx`)
 
 **Lưu ý:** Với Gmail, bạn cần sử dụng **App Password** thay vì mật khẩu thông thường:
 
